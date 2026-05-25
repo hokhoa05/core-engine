@@ -18,21 +18,21 @@ type InMemOrderBook struct {
 	bids *redblacktree.Tree
 	asks *redblacktree.Tree
 
-	orderRegistry map[string]orderRef
+	ordersRegistry map[uint64]orderRef
 }
 
-func newInMemOrderBook() *InMemOrderBook {
+func NewInMemOrderBook() *InMemOrderBook {
 	return &InMemOrderBook{
 		bids: redblacktree.NewWith(func(a, b interface{}) int {
 			return utils.UInt64Comparator(b, a)
 		}),
-		asks:          redblacktree.NewWith(utils.UInt64Comparator),
-		orderRegistry: make(map[string]orderRef),
+		asks:           redblacktree.NewWith(utils.UInt64Comparator),
+		ordersRegistry: make(map[uint64]orderRef),
 	}
 }
 
 func (ob *InMemOrderBook) Add(order models.Order) error {
-	if _, exists := ob.orderRegistry[order.ID]; exists {
+	if _, exists := ob.ordersRegistry[order.ID]; exists {
 		return errors.New("order ID already exists")
 	}
 
@@ -52,15 +52,15 @@ func (ob *InMemOrderBook) Add(order models.Order) error {
 
 	element := pl.Append(order)
 
-	ob.orderRegistry[order.ID] = orderRef{
+	ob.ordersRegistry[order.ID] = orderRef{
 		element:    element,
 		priceLevel: pl,
 	}
 	return nil
 }
 
-func (ob *InMemOrderBook) Cancel(orderID string) error {
-	ref, exists := ob.orderRegistry[orderID]
+func (ob *InMemOrderBook) Cancel(orderID uint64) error {
+	ref, exists := ob.ordersRegistry[orderID]
 	if !exists {
 		return errors.New("order not found")
 	}
@@ -71,7 +71,7 @@ func (ob *InMemOrderBook) Cancel(orderID string) error {
 	pl.Orders.Remove(ref.element)
 	pl.Volume -= order.Qty
 
-	delete(ob.orderRegistry, orderID)
+	delete(ob.ordersRegistry, orderID)
 
 	if pl.Orders.Len() == 0 {
 		if order.Side == models.Buy {
@@ -140,7 +140,7 @@ func (ob *InMemOrderBook) matchWithPriceLevel(pl *PriceLevel, taker *models.Orde
 		matchQty := min(taker.Qty, maker.Qty)
 
 		trade := models.Trade{
-			MakeOrderID:  maker.ID,
+			MakerOrderID: maker.ID,
 			TakerOrderID: taker.ID,
 			Price:        pl.Price,
 			Qty:          matchQty,
@@ -154,7 +154,7 @@ func (ob *InMemOrderBook) matchWithPriceLevel(pl *PriceLevel, taker *models.Orde
 
 		if maker.Qty == 0 {
 			pl.Orders.Remove(currElem)
-			delete(ob.orderRegistry, maker.ID)
+			delete(ob.ordersRegistry, maker.ID)
 		} else {
 			currElem.Value = maker
 		}

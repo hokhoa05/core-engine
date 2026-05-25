@@ -8,15 +8,15 @@ const (
 )
 
 type Order struct {
-	ID    string
+	ID    uint64
 	Price uint64
 	Qty   uint64
 	Side  Side
 }
 
 type Trade struct {
-	MakeOrderID  string
-	TakerOrderID string
+	MakerOrderID uint64
+	TakerOrderID uint64
 	Price        uint64
 	Qty          uint64
 }
