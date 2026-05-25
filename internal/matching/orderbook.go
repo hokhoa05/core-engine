@@ -82,3 +82,83 @@ func (ob *InMemOrderBook) Cancel(orderID string) error {
 	}
 	return nil
 }
+
+func (ob *InMemOrderBook) Process(taker models.Order) []models.Trade {
+	var trades []models.Trade
+
+	if taker.Side == models.Buy {
+		for taker.Qty > 0 && ob.asks.Size() > 0 {
+			minNode := ob.asks.Left()
+			bestAskPrice := minNode.Key.(uint64)
+
+			if taker.Price < bestAskPrice {
+				break
+			}
+
+			priceLevel := minNode.Value.(*PriceLevel)
+
+			matchedTrades := ob.matchWithPriceLevel(priceLevel, &taker)
+			trades = append(trades, matchedTrades...)
+
+			if priceLevel.Orders.Len() == 0 {
+				ob.asks.Remove(bestAskPrice)
+			}
+		}
+	} else {
+		for taker.Qty > 0 && ob.bids.Size() > 0 {
+			maxNode := ob.bids.Left()
+			bestBidPrice := maxNode.Key.(uint64)
+
+			if taker.Price > bestBidPrice {
+				break
+			}
+
+			priceLevel := maxNode.Value.(*PriceLevel)
+
+			matchedTrades := ob.matchWithPriceLevel(priceLevel, &taker)
+			trades = append(trades, matchedTrades...)
+
+			if priceLevel.Orders.Len() == 0 {
+				ob.bids.Remove(bestBidPrice)
+			}
+		}
+	}
+	if taker.Qty > 0 {
+		_ = ob.Add(taker)
+	}
+	return trades
+}
+
+func (ob *InMemOrderBook) matchWithPriceLevel(pl *PriceLevel, taker *models.Order) []models.Trade {
+	var trades []models.Trade
+	currElem := pl.Orders.Front()
+
+	for currElem != nil && taker.Qty > 0 {
+		nextElem := currElem.Next()
+		maker := currElem.Value.(models.Order)
+
+		matchQty := min(taker.Qty, maker.Qty)
+
+		trade := models.Trade{
+			MakeOrderID:  maker.ID,
+			TakerOrderID: taker.ID,
+			Price:        pl.Price,
+			Qty:          matchQty,
+		}
+
+		trades = append(trades, trade)
+
+		taker.Qty -= matchQty
+		maker.Qty -= matchQty
+		pl.Volume -= matchQty
+
+		if maker.Qty == 0 {
+			pl.Orders.Remove(currElem)
+			delete(ob.orderRegistry, maker.ID)
+		} else {
+			currElem.Value = maker
+		}
+		currElem = nextElem
+	}
+	return trades
+}
