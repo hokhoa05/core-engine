@@ -162,3 +162,33 @@ func (ob *InMemOrderBook) matchWithPriceLevel(pl *PriceLevel, taker *models.Orde
 	}
 	return trades
 }
+func (ob *InMemOrderBook) ProcessMarketOrder(taker models.Order) []models.Trade {
+	var trades []models.Trade
+
+	if taker.Side == models.Buy {
+		for taker.Qty > 0 && ob.asks.Size() > 0 {
+			minNode := ob.asks.Left()
+			priceLevel := minNode.Value.(*PriceLevel)
+
+			matchedTrades := ob.matchWithPriceLevel(priceLevel, &taker)
+			trades = append(trades, matchedTrades...)
+
+			if priceLevel.Orders.Len() == 0 {
+				ob.asks.Remove(minNode.Key)
+			}
+		}
+	} else {
+		for taker.Qty > 0 && ob.bids.Size() > 0 {
+			maxNode := ob.asks.Left()
+			priceLevel := maxNode.Value.(*PriceLevel)
+
+			matchedTrades := ob.matchWithPriceLevel(priceLevel, &taker)
+			trades = append(trades, matchedTrades...)
+
+			if priceLevel.Orders.Len() == 0 {
+				ob.bids.Remove(maxNode.Key)
+			}
+		}
+	}
+	return trades
+}

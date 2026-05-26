@@ -84,3 +84,35 @@ func TestInMemOrderBook_SimpleMatch(t *testing.T) {
 		assert.Equal(t, uint64(60), pl.(*PriceLevel).Volume, "Maker should have 60 qty remaining")
 	})
 }
+
+// TestInMemOrderBook_MarketOrder kiểm thử TSK-08
+func TestInMemOrderBook_MarketOrder(t *testing.T) {
+	t.Run("Market Buy Order sweeps multiple ask levels and discards remaining qty", func(t *testing.T) {
+		ob := NewInMemOrderBook()
+
+		// GIVEN: Sổ lệnh có 2 mức giá bán khác nhau
+		_ = ob.Add(models.Order{ID: 101, Side: models.Sell, Price: 100, Qty: 10}) // Rẻ hơn
+		_ = ob.Add(models.Order{ID: 102, Side: models.Sell, Price: 105, Qty: 15}) // Đắt hơn
+
+		// WHEN: Lệnh Market Buy muốn mua tới 30 đơn vị (Nhiều hơn tổng thanh khoản là 25)
+		takerOrder := models.Order{ID: 201, Side: models.Buy, Price: 0, Qty: 30} // Giá 0 vì là Market Order
+		trades := ob.ProcessMarketOrder(takerOrder)
+
+		// THEN: Khớp sinh ra 2 trades ở 2 mức giá khác nhau
+		assert.Len(t, trades, 2, "Should sweep 2 price levels")
+
+		// Trade 1: Khớp hết 10 đơn vị ở giá 100
+		assert.Equal(t, uint64(10), trades[0].Qty)
+		assert.Equal(t, uint64(100), trades[0].Price)
+
+		// Trade 2: Khớp nốt 15 đơn vị ở giá 105 (Hiện tượng trượt giá)
+		assert.Equal(t, uint64(15), trades[1].Qty)
+		assert.Equal(t, uint64(105), trades[1].Price)
+
+		// Kiểm tra thanh khoản đã bị quét sạch
+		assert.Equal(t, 0, ob.asks.Size())
+
+		// Lệnh Market Order mua 30, chỉ khớp 25, thiếu 5. Nhưng 5 đơn vị này không được lên sổ Mua.
+		assert.Equal(t, 0, ob.bids.Size(), "Market order remainder should NOT be added to book")
+	})
+}
