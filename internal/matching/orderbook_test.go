@@ -144,3 +144,27 @@ func TestInMemOrderBook_ComplexPartialFills(t *testing.T) {
 		assert.Equal(t, "order quantity must be greater than zero", err.Error())
 	})
 }
+
+func TestInMemOrderBook_PriceTimePriority(t *testing.T) {
+	t.Run("Strict FIFO execution for multiple orders at the exact same price", func(t *testing.T) {
+		ob := NewInMemOrderBook()
+
+		_ = ob.Add(models.Order{ID: 101, Side: models.Sell, Price: 5000, Qty: 10}) // Đặt sớm nhất (Đứng đầu hàng)
+		_ = ob.Add(models.Order{ID: 102, Side: models.Sell, Price: 5000, Qty: 20}) // Đặt thứ 2
+		_ = ob.Add(models.Order{ID: 103, Side: models.Sell, Price: 5000, Qty: 15}) // Đặt muộn nhất (Đứng cuối hàng)
+
+		taker := models.Order{ID: 201, Side: models.Buy, Price: 5000, Qty: 25}
+		trades, _ := ob.Process(taker)
+
+		assert.Len(t, trades, 2, "Should generate exactly 2 trades to fill 25 qty")
+
+		assert.Equal(t, uint64(10), trades[0].Qty)
+		assert.Equal(t, uint64(101), trades[0].MakerOrderID, "First maker must be filled first")
+
+		assert.Equal(t, uint64(15), trades[1].Qty)
+		assert.Equal(t, uint64(102), trades[1].MakerOrderID, "Second maker must be filled second")
+
+		pl, _ := ob.asks.Get(uint64(5000))
+		assert.Equal(t, uint64(20), pl.(*PriceLevel).Volume, "Remaining volume should be 5 (from ID 102) + 15 (from ID 103)")
+	})
+}
