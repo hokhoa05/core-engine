@@ -32,6 +32,9 @@ func NewInMemOrderBook() *InMemOrderBook {
 }
 
 func (ob *InMemOrderBook) Add(order models.Order) error {
+	if err := order.Validate(false); err != nil {
+		return err
+	}
 	if _, exists := ob.ordersRegistry[order.ID]; exists {
 		return errors.New("order ID already exists")
 	}
@@ -83,7 +86,10 @@ func (ob *InMemOrderBook) Cancel(orderID uint64) error {
 	return nil
 }
 
-func (ob *InMemOrderBook) Process(taker models.Order) []models.Trade {
+func (ob *InMemOrderBook) Process(taker models.Order) ([]models.Trade, error) {
+	if err := taker.Validate(false); err != nil {
+		return nil, err
+	}
 	var trades []models.Trade
 
 	if taker.Side == models.Buy {
@@ -126,7 +132,7 @@ func (ob *InMemOrderBook) Process(taker models.Order) []models.Trade {
 	if taker.Qty > 0 {
 		_ = ob.Add(taker)
 	}
-	return trades
+	return trades, nil
 }
 
 func (ob *InMemOrderBook) matchWithPriceLevel(pl *PriceLevel, taker *models.Order) []models.Trade {
