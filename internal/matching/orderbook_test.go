@@ -47,7 +47,8 @@ func TestInMemOrderBook_SimpleMatch(t *testing.T) {
 		_ = ob.Add(makerOrder)
 
 		takerOrder := models.Order{ID: 201, Side: models.Buy, Price: 15000, Qty: 100}
-		trades, _ := ob.Process(takerOrder)
+		var trades []*models.Trade
+		_ = ob.Process(takerOrder, &trades)
 
 		assert.Len(t, trades, 1, "Should generate exactly 1 trade")
 		assert.Equal(t, uint64(15000), trades[0].Price)
@@ -66,7 +67,8 @@ func TestInMemOrderBook_SimpleMatch(t *testing.T) {
 		_ = ob.Add(makerOrder)
 
 		takerOrder := models.Order{ID: 202, Side: models.Buy, Price: 15000, Qty: 40}
-		trades, _ := ob.Process(takerOrder)
+		var trades []*models.Trade
+		_ = ob.Process(takerOrder, &trades)
 
 		assert.Len(t, trades, 1)
 		assert.Equal(t, uint64(40), trades[0].Qty)
@@ -84,7 +86,9 @@ func TestInMemOrderBook_MarketOrder(t *testing.T) {
 		_ = ob.Add(models.Order{ID: 102, Side: models.Sell, Price: 105, Qty: 15}) // Đắt hơn
 
 		takerOrder := models.Order{ID: 201, Side: models.Buy, Price: 0, Qty: 30} // Giá 0 vì là Market Order
-		trades := ob.ProcessMarketOrder(takerOrder)
+
+		var trades []*models.Trade
+		ob.ProcessMarketOrder(takerOrder, &trades)
 
 		assert.Len(t, trades, 2, "Should sweep 2 price levels")
 
@@ -108,7 +112,8 @@ func TestInMemOrderBook_ComplexPartialFills(t *testing.T) {
 		_ = ob.Add(maker)
 
 		taker1 := models.Order{ID: 2, Side: models.Buy, Price: 5000, Qty: 30}
-		trades1, _ := ob.Process(taker1) // Bỏ qua error check cho gọn trong test này
+		var trades1 []*models.Trade
+		_ = ob.Process(taker1, &trades1) // Bỏ qua error check cho gọn trong test này
 
 		assert.Len(t, trades1, 1)
 		assert.Equal(t, uint64(30), trades1[0].Qty)
@@ -116,14 +121,16 @@ func TestInMemOrderBook_ComplexPartialFills(t *testing.T) {
 		assert.Equal(t, uint64(70), pl.(*PriceLevel).Volume, "Level volume should drop to 70")
 
 		taker2 := models.Order{ID: 3, Side: models.Buy, Price: 5000, Qty: 50}
-		trades2, _ := ob.Process(taker2)
+		var trades2 []*models.Trade
+		_ = ob.Process(taker2, &trades2)
 
 		assert.Len(t, trades2, 1)
 		assert.Equal(t, uint64(50), trades2[0].Qty)
 		assert.Equal(t, uint64(20), pl.(*PriceLevel).Volume, "Level volume should drop to 20")
 
 		taker3 := models.Order{ID: 4, Side: models.Buy, Price: 5000, Qty: 40}
-		trades3, _ := ob.Process(taker3)
+		var trades3 []*models.Trade
+		_ = ob.Process(taker3, &trades3)
 
 		assert.Len(t, trades3, 1)
 		assert.Equal(t, uint64(20), trades3[0].Qty, "Should only fill remaining 20")
@@ -154,7 +161,8 @@ func TestInMemOrderBook_PriceTimePriority(t *testing.T) {
 		_ = ob.Add(models.Order{ID: 103, Side: models.Sell, Price: 5000, Qty: 15}) // Đặt muộn nhất (Đứng cuối hàng)
 
 		taker := models.Order{ID: 201, Side: models.Buy, Price: 5000, Qty: 25}
-		trades, _ := ob.Process(taker)
+		var trades []*models.Trade
+		_ = ob.Process(taker, &trades)
 
 		assert.Len(t, trades, 2, "Should generate exactly 2 trades to fill 25 qty")
 

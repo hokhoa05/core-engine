@@ -7,6 +7,7 @@ import (
 	"github.com/emirpasic/gods/trees/redblacktree"
 	"github.com/emirpasic/gods/utils"
 	"github.com/hokhoa05/core-engine/internal/models"
+	"github.com/hokhoa05/core-engine/internal/pool"
 )
 
 type orderRef struct {
@@ -15,9 +16,9 @@ type orderRef struct {
 }
 
 type InMemOrderBook struct {
-	bids *redblacktree.Tree
-	asks *redblacktree.Tree
-
+	bids           *redblacktree.Tree
+	asks           *redblacktree.Tree
+	tradePool      *pool.TradePool
 	ordersRegistry map[uint64]orderRef
 }
 
@@ -28,6 +29,7 @@ func NewInMemOrderBook() *InMemOrderBook {
 		}),
 		asks:           redblacktree.NewWith(utils.UInt64Comparator),
 		ordersRegistry: make(map[uint64]orderRef),
+		tradePool:      pool.NewTradePool(100000),
 	}
 }
 
@@ -86,12 +88,10 @@ func (ob *InMemOrderBook) Cancel(orderID uint64) error {
 	return nil
 }
 
-func (ob *InMemOrderBook) Process(taker models.Order) ([]models.Trade, error) {
+func (ob *InMemOrderBook) Process(taker models.Order, tradeBuffer *[]*models.Trade) error {
 	if err := taker.Validate(false); err != nil {
-		return nil, err
+		return err
 	}
-	var trades []models.Trade
-
 	if taker.Side == models.Buy {
 		for taker.Qty > 0 && ob.asks.Size() > 0 {
 			minNode := ob.asks.Left()
@@ -103,8 +103,7 @@ func (ob *InMemOrderBook) Process(taker models.Order) ([]models.Trade, error) {
 
 			priceLevel := minNode.Value.(*PriceLevel)
 
-			matchedTrades := ob.matchWithPriceLevel(priceLevel, &taker)
-			trades = append(trades, matchedTrades...)
+			ob.matchWithPriceLevel(priceLevel, &taker, tradeBuffer)
 
 			if priceLevel.Orders.Len() == 0 {
 				ob.asks.Remove(bestAskPrice)
@@ -121,8 +120,7 @@ func (ob *InMemOrderBook) Process(taker models.Order) ([]models.Trade, error) {
 
 			priceLevel := maxNode.Value.(*PriceLevel)
 
-			matchedTrades := ob.matchWithPriceLevel(priceLevel, &taker)
-			trades = append(trades, matchedTrades...)
+			ob.matchWithPriceLevel(priceLevel, &taker, tradeBuffer)
 
 			if priceLevel.Orders.Len() == 0 {
 				ob.bids.Remove(bestBidPrice)
@@ -132,11 +130,10 @@ func (ob *InMemOrderBook) Process(taker models.Order) ([]models.Trade, error) {
 	if taker.Qty > 0 {
 		_ = ob.Add(taker)
 	}
-	return trades, nil
+	return nil
 }
 
-func (ob *InMemOrderBook) matchWithPriceLevel(pl *PriceLevel, taker *models.Order) []models.Trade {
-	var trades []models.Trade
+func (ob *InMemOrderBook) matchWithPriceLevel(pl *PriceLevel, taker *models.Order, tradeBuffer *[]*models.Trade) {
 	currElem := pl.Orders.Front()
 
 	for currElem != nil && taker.Qty > 0 {
@@ -144,15 +141,15 @@ func (ob *InMemOrderBook) matchWithPriceLevel(pl *PriceLevel, taker *models.Orde
 		maker := currElem.Value.(models.Order)
 
 		matchQty := min(taker.Qty, maker.Qty)
+		tradeObj := ob.tradePool.Borrow()
+		if tradeObj != nil {
+			tradeObj.MakerOrderID = maker.ID
+			tradeObj.TakerOrderID = taker.ID
+			tradeObj.Price = pl.Price
+			tradeObj.Qty = matchQty
 
-		trade := models.Trade{
-			MakerOrderID: maker.ID,
-			TakerOrderID: taker.ID,
-			Price:        pl.Price,
-			Qty:          matchQty,
+			*tradeBuffer = append(*tradeBuffer, tradeObj)
 		}
-
-		trades = append(trades, trade)
 
 		taker.Qty -= matchQty
 		maker.Qty -= matchQty
@@ -166,18 +163,17 @@ func (ob *InMemOrderBook) matchWithPriceLevel(pl *PriceLevel, taker *models.Orde
 		}
 		currElem = nextElem
 	}
-	return trades
 }
-func (ob *InMemOrderBook) ProcessMarketOrder(taker models.Order) []models.Trade {
-	var trades []models.Trade
-
+func (ob *InMemOrderBook) ProcessMarketOrder(taker models.Order, tradeBuffer *[]*models.Trade) error {
+	if err := taker.Validate(true); err != nil {
+		return err
+	}
 	if taker.Side == models.Buy {
 		for taker.Qty > 0 && ob.asks.Size() > 0 {
 			minNode := ob.asks.Left()
 			priceLevel := minNode.Value.(*PriceLevel)
 
-			matchedTrades := ob.matchWithPriceLevel(priceLevel, &taker)
-			trades = append(trades, matchedTrades...)
+			ob.matchWithPriceLevel(priceLevel, &taker, tradeBuffer)
 
 			if priceLevel.Orders.Len() == 0 {
 				ob.asks.Remove(minNode.Key)
@@ -185,16 +181,15 @@ func (ob *InMemOrderBook) ProcessMarketOrder(taker models.Order) []models.Trade 
 		}
 	} else {
 		for taker.Qty > 0 && ob.bids.Size() > 0 {
-			maxNode := ob.asks.Left()
+			maxNode := ob.bids.Left()
 			priceLevel := maxNode.Value.(*PriceLevel)
 
-			matchedTrades := ob.matchWithPriceLevel(priceLevel, &taker)
-			trades = append(trades, matchedTrades...)
+			ob.matchWithPriceLevel(priceLevel, &taker, tradeBuffer)
 
 			if priceLevel.Orders.Len() == 0 {
 				ob.bids.Remove(maxNode.Key)
 			}
 		}
 	}
-	return trades
+	return nil
 }
