@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.trading.api_gateway.grpc";
+option java_outer_classname = "EngineProto";
+
+option go_package = "github.com/hokhoa05/core-engine/pb"; 
+
+package engine;
+
+service MatchingEngine {
+  rpc PushOrder (OrderRequest) returns (OrderResponse);
+}
+
+message OrderRequest {
+  int64 order_id = 1;
+  int64 user_id = 2;
+  string side = 3;
+  int64 price = 4;
+  int64 qty = 5;
+}
+
+message OrderResponse {
+  bool success = 1;
+  string message = 2;
+}
