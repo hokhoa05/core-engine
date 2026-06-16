@@ -149,6 +149,134 @@ func (x *OrderResponse) GetMessage() string {
 	return ""
 }
 
+type TradeReportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MakerOrderId  int64                  `protobuf:"varint,1,opt,name=maker_order_id,json=makerOrderId,proto3" json:"maker_order_id,omitempty"`
+	TakerOrderId  int64                  `protobuf:"varint,2,opt,name=taker_order_id,json=takerOrderId,proto3" json:"taker_order_id,omitempty"`
+	MakerUserId   int64                  `protobuf:"varint,3,opt,name=maker_user_id,json=makerUserId,proto3" json:"maker_user_id,omitempty"`
+	TakerUserId   int64                  `protobuf:"varint,4,opt,name=taker_user_id,json=takerUserId,proto3" json:"taker_user_id,omitempty"`
+	Price         int64                  `protobuf:"varint,5,opt,name=price,proto3" json:"price,omitempty"`
+	Qty           int64                  `protobuf:"varint,6,opt,name=qty,proto3" json:"qty,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TradeReportRequest) Reset() {
+	*x = TradeReportRequest{}
+	mi := &file_proto_engine_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TradeReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TradeReportRequest) ProtoMessage() {}
+
+func (x *TradeReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_engine_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TradeReportRequest.ProtoReflect.Descriptor instead.
+func (*TradeReportRequest) Descriptor() ([]byte, []int) {
+	return file_proto_engine_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *TradeReportRequest) GetMakerOrderId() int64 {
+	if x != nil {
+		return x.MakerOrderId
+	}
+	return 0
+}
+
+func (x *TradeReportRequest) GetTakerOrderId() int64 {
+	if x != nil {
+		return x.TakerOrderId
+	}
+	return 0
+}
+
+func (x *TradeReportRequest) GetMakerUserId() int64 {
+	if x != nil {
+		return x.MakerUserId
+	}
+	return 0
+}
+
+func (x *TradeReportRequest) GetTakerUserId() int64 {
+	if x != nil {
+		return x.TakerUserId
+	}
+	return 0
+}
+
+func (x *TradeReportRequest) GetPrice() int64 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
+}
+
+func (x *TradeReportRequest) GetQty() int64 {
+	if x != nil {
+		return x.Qty
+	}
+	return 0
+}
+
+type TradeReportResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TradeReportResponse) Reset() {
+	*x = TradeReportResponse{}
+	mi := &file_proto_engine_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TradeReportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TradeReportResponse) ProtoMessage() {}
+
+func (x *TradeReportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_engine_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TradeReportResponse.ProtoReflect.Descriptor instead.
+func (*TradeReportResponse) Descriptor() ([]byte, []int) {
+	return file_proto_engine_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *TradeReportResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 var File_proto_engine_proto protoreflect.FileDescriptor
 
 const file_proto_engine_proto_rawDesc = "" +
@@ -162,9 +290,20 @@ const file_proto_engine_proto_rawDesc = "" +
 	"\x03qty\x18\x05 \x01(\x03R\x03qty\"C\n" +
 	"\rOrderResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage2J\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xd0\x01\n" +
+	"\x12TradeReportRequest\x12$\n" +
+	"\x0emaker_order_id\x18\x01 \x01(\x03R\fmakerOrderId\x12$\n" +
+	"\x0etaker_order_id\x18\x02 \x01(\x03R\ftakerOrderId\x12\"\n" +
+	"\rmaker_user_id\x18\x03 \x01(\x03R\vmakerUserId\x12\"\n" +
+	"\rtaker_user_id\x18\x04 \x01(\x03R\vtakerUserId\x12\x14\n" +
+	"\x05price\x18\x05 \x01(\x03R\x05price\x12\x10\n" +
+	"\x03qty\x18\x06 \x01(\x03R\x03qty\"/\n" +
+	"\x13TradeReportResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2J\n" +
 	"\x0eMatchingEngine\x128\n" +
-	"\tPushOrder\x12\x14.engine.OrderRequest\x1a\x15.engine.OrderResponseBQ\n" +
+	"\tPushOrder\x12\x14.engine.OrderRequest\x1a\x15.engine.OrderResponse2Z\n" +
+	"\x10SettlementEngine\x12F\n" +
+	"\vReportTrade\x12\x1a.engine.TradeReportRequest\x1a\x1b.engine.TradeReportResponseBQ\n" +
 	"\x1ccom.trading.api_gateway.grpcB\vEngineProtoP\x01Z\"github.com/hokhoa05/core-engine/pbb\x06proto3"
 
 var (
@@ -179,16 +318,20 @@ func file_proto_engine_proto_rawDescGZIP() []byte {
 	return file_proto_engine_proto_rawDescData
 }
 
-var file_proto_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_proto_engine_proto_goTypes = []any{
-	(*OrderRequest)(nil),  // 0: engine.OrderRequest
-	(*OrderResponse)(nil), // 1: engine.OrderResponse
+	(*OrderRequest)(nil),        // 0: engine.OrderRequest
+	(*OrderResponse)(nil),       // 1: engine.OrderResponse
+	(*TradeReportRequest)(nil),  // 2: engine.TradeReportRequest
+	(*TradeReportResponse)(nil), // 3: engine.TradeReportResponse
 }
 var file_proto_engine_proto_depIdxs = []int32{
 	0, // 0: engine.MatchingEngine.PushOrder:input_type -> engine.OrderRequest
-	1, // 1: engine.MatchingEngine.PushOrder:output_type -> engine.OrderResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: engine.SettlementEngine.ReportTrade:input_type -> engine.TradeReportRequest
+	1, // 2: engine.MatchingEngine.PushOrder:output_type -> engine.OrderResponse
+	3, // 3: engine.SettlementEngine.ReportTrade:output_type -> engine.TradeReportResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -205,9 +348,9 @@ func file_proto_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_engine_proto_rawDesc), len(file_proto_engine_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   2,
 		},
 		GoTypes:           file_proto_engine_proto_goTypes,
 		DependencyIndexes: file_proto_engine_proto_depIdxs,

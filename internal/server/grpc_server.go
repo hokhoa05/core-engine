@@ -31,12 +31,13 @@ func (s *grpcServer) PushOrder(ctx context.Context, req *pb.OrderRequest) (*pb.O
 	}
 
 	cmd := matching.Command{
-		Type: matching.CmdPlaceOlder,
+		Type: matching.CmdPlaceOrder,
 		Order: models.Order{
-			ID:    uint64(req.OrderId),
-			Side:  side,
-			Price: uint64(req.Price),
-			Qty:   uint64(req.Qty),
+			ID:     uint64(req.OrderId),
+			UserID: uint64(req.UserId),
+			Side:   side,
+			Price:  uint64(req.Price),
+			Qty:    uint64(req.Qty),
 		},
 	}
 

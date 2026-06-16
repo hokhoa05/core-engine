@@ -9,7 +9,7 @@ import (
 type CommandType int
 
 const (
-	CmdPlaceOlder CommandType = iota
+	CmdPlaceOrder CommandType = iota
 	CmdCancelOrder
 )
 
@@ -20,16 +20,18 @@ type Command struct {
 }
 
 type EngineRunner struct {
-	orderBook   *InMemOrderBook
-	commandChan chan Command
-	tradeBuffer []*models.Trade
+	orderBook    *InMemOrderBook
+	commandChan  chan Command
+	tradeBuffer  []*models.Trade
+	tradeChannel chan models.Trade
 }
 
-func NewEngineRunner(bufferSize int) *EngineRunner {
+func NewEngineRunner(bufferSize int, tradeBufferSize int) *EngineRunner {
 	return &EngineRunner{
-		orderBook:   NewInMemOrderBook(),
-		commandChan: make(chan Command, bufferSize),
-		tradeBuffer: make([]*models.Trade, 0, 100),
+		orderBook:    NewInMemOrderBook(),
+		commandChan:  make(chan Command, bufferSize),
+		tradeBuffer:  make([]*models.Trade, 0, 100),
+		tradeChannel: make(chan models.Trade, tradeBufferSize),
 	}
 }
 
@@ -38,7 +40,7 @@ func (r *EngineRunner) Start() {
 
 	for cmd := range r.commandChan {
 		switch cmd.Type {
-		case CmdPlaceOlder:
+		case CmdPlaceOrder:
 			r.tradeBuffer = r.tradeBuffer[:0]
 			if cmd.Order.Price == 0 {
 				_ = r.orderBook.ProcessMarketOrder(cmd.Order, &r.tradeBuffer)
@@ -47,9 +49,9 @@ func (r *EngineRunner) Start() {
 			}
 
 			for _, trade := range r.tradeBuffer {
-				fmt.Printf("[TRADE MATCHED] Maker: %d | Taker: %d | Price: %d | Qty: %d\n",
-					trade.MakerOrderID, trade.TakerOrderID, trade.Price, trade.Qty)
-
+				fmt.Printf("[TRADE MATCHED] Maker: %d | Taker: %d | MakerOrderID: %d | TakerOrderID: %d | Price: %d | Qty: %d\n",
+					trade.MakerUserID, trade.TakerUserID, trade.MakerOrderID, trade.TakerOrderID, trade.Price, trade.Qty)
+				r.tradeChannel <- *trade
 				r.orderBook.tradePool.Return()
 			}
 		case CmdCancelOrder:
@@ -65,4 +67,8 @@ func (r *EngineRunner) Start() {
 
 func (r *EngineRunner) PushCommand(cmd Command) {
 	r.commandChan <- cmd
+}
+
+func (r *EngineRunner) TradeChannel() <-chan models.Trade {
+	return r.tradeChannel
 }

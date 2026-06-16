@@ -11,7 +11,7 @@ func TestInMemOrderBook_Add_And_Cancel(t *testing.T) {
 	ob := NewInMemOrderBook()
 
 	t.Run("Given a new Limit Buy Order, When added, Then it exists in Tree and Registry", func(t *testing.T) {
-		order := models.Order{ID: 1, Side: models.Buy, Price: 10000, Qty: 50}
+		order := models.Order{ID: 1, UserID: 11, Side: models.Buy, Price: 10000, Qty: 50}
 		err := ob.Add(order)
 
 		assert.NoError(t, err)
@@ -28,10 +28,10 @@ func TestInMemOrderBook_Add_And_Cancel(t *testing.T) {
 	})
 
 	t.Run("Given duplicate Order ID, When added, Then return error", func(t *testing.T) {
-		order1 := models.Order{ID: 2, Side: models.Sell, Price: 10500, Qty: 10}
+		order1 := models.Order{ID: 2, UserID: 12, Side: models.Sell, Price: 10500, Qty: 10}
 		_ = ob.Add(order1)
 
-		order2 := models.Order{ID: 2, Side: models.Sell, Price: 10600, Qty: 20}
+		order2 := models.Order{ID: 2, UserID: 13, Side: models.Sell, Price: 10600, Qty: 20}
 		err := ob.Add(order2) // Cố tình thêm trùng ID
 
 		assert.Error(t, err)
@@ -43,10 +43,10 @@ func TestInMemOrderBook_SimpleMatch(t *testing.T) {
 	t.Run("Exact Match: 1 Taker completely fills 1 Maker", func(t *testing.T) {
 		ob := NewInMemOrderBook()
 
-		makerOrder := models.Order{ID: 101, Side: models.Sell, Price: 15000, Qty: 100}
+		makerOrder := models.Order{ID: 101, UserID: 1001, Side: models.Sell, Price: 15000, Qty: 100}
 		_ = ob.Add(makerOrder)
 
-		takerOrder := models.Order{ID: 201, Side: models.Buy, Price: 15000, Qty: 100}
+		takerOrder := models.Order{ID: 201, UserID: 2001, Side: models.Buy, Price: 15000, Qty: 100}
 		var trades []*models.Trade
 		_ = ob.Process(takerOrder, &trades)
 
@@ -55,6 +55,8 @@ func TestInMemOrderBook_SimpleMatch(t *testing.T) {
 		assert.Equal(t, uint64(100), trades[0].Qty)
 		assert.Equal(t, uint64(101), trades[0].MakerOrderID)
 		assert.Equal(t, uint64(201), trades[0].TakerOrderID)
+		assert.Equal(t, uint64(1001), trades[0].MakerUserID)
+		assert.Equal(t, uint64(2001), trades[0].TakerUserID)
 
 		assert.Equal(t, 0, ob.asks.Size())
 		assert.Empty(t, ob.ordersRegistry)
@@ -63,10 +65,10 @@ func TestInMemOrderBook_SimpleMatch(t *testing.T) {
 	t.Run("Partial Match: Taker buys less than Maker offers", func(t *testing.T) {
 		ob := NewInMemOrderBook()
 
-		makerOrder := models.Order{ID: 102, Side: models.Sell, Price: 15000, Qty: 100}
+		makerOrder := models.Order{ID: 102, UserID: 1002, Side: models.Sell, Price: 15000, Qty: 100}
 		_ = ob.Add(makerOrder)
 
-		takerOrder := models.Order{ID: 202, Side: models.Buy, Price: 15000, Qty: 40}
+		takerOrder := models.Order{ID: 202, UserID: 2002, Side: models.Buy, Price: 15000, Qty: 40}
 		var trades []*models.Trade
 		_ = ob.Process(takerOrder, &trades)
 
@@ -82,10 +84,10 @@ func TestInMemOrderBook_MarketOrder(t *testing.T) {
 	t.Run("Market Buy Order sweeps multiple ask levels and discards remaining qty", func(t *testing.T) {
 		ob := NewInMemOrderBook()
 
-		_ = ob.Add(models.Order{ID: 101, Side: models.Sell, Price: 100, Qty: 10}) // Rẻ hơn
-		_ = ob.Add(models.Order{ID: 102, Side: models.Sell, Price: 105, Qty: 15}) // Đắt hơn
+		_ = ob.Add(models.Order{ID: 101, UserID: 1001, Side: models.Sell, Price: 100, Qty: 10}) // Rẻ hơn
+		_ = ob.Add(models.Order{ID: 102, UserID: 1002, Side: models.Sell, Price: 105, Qty: 15}) // Đắt hơn
 
-		takerOrder := models.Order{ID: 201, Side: models.Buy, Price: 0, Qty: 30} // Giá 0 vì là Market Order
+		takerOrder := models.Order{ID: 201, UserID: 2001, Side: models.Buy, Price: 0, Qty: 30} // Giá 0 vì là Market Order
 
 		var trades []*models.Trade
 		ob.ProcessMarketOrder(takerOrder, &trades)
@@ -94,9 +96,13 @@ func TestInMemOrderBook_MarketOrder(t *testing.T) {
 
 		assert.Equal(t, uint64(10), trades[0].Qty)
 		assert.Equal(t, uint64(100), trades[0].Price)
+		assert.Equal(t, uint64(1001), trades[0].MakerUserID)
+		assert.Equal(t, uint64(2001), trades[0].TakerUserID)
 
 		assert.Equal(t, uint64(15), trades[1].Qty)
 		assert.Equal(t, uint64(105), trades[1].Price)
+		assert.Equal(t, uint64(1002), trades[1].MakerUserID)
+		assert.Equal(t, uint64(2001), trades[1].TakerUserID)
 
 		assert.Equal(t, 0, ob.asks.Size())
 
@@ -108,32 +114,38 @@ func TestInMemOrderBook_ComplexPartialFills(t *testing.T) {
 	t.Run("Maker is partially filled by multiple takers until depleted", func(t *testing.T) {
 		ob := NewInMemOrderBook()
 
-		maker := models.Order{ID: 1, Side: models.Sell, Price: 5000, Qty: 100}
+		maker := models.Order{ID: 1, UserID: 11, Side: models.Sell, Price: 5000, Qty: 100}
 		_ = ob.Add(maker)
 
-		taker1 := models.Order{ID: 2, Side: models.Buy, Price: 5000, Qty: 30}
+		taker1 := models.Order{ID: 2, UserID: 21, Side: models.Buy, Price: 5000, Qty: 30}
 		var trades1 []*models.Trade
 		_ = ob.Process(taker1, &trades1) // Bỏ qua error check cho gọn trong test này
 
 		assert.Len(t, trades1, 1)
 		assert.Equal(t, uint64(30), trades1[0].Qty)
+		assert.Equal(t, uint64(11), trades1[0].MakerUserID)
+		assert.Equal(t, uint64(21), trades1[0].TakerUserID)
 		pl, _ := ob.asks.Get(uint64(5000))
 		assert.Equal(t, uint64(70), pl.(*PriceLevel).Volume, "Level volume should drop to 70")
 
-		taker2 := models.Order{ID: 3, Side: models.Buy, Price: 5000, Qty: 50}
+		taker2 := models.Order{ID: 3, UserID: 22, Side: models.Buy, Price: 5000, Qty: 50}
 		var trades2 []*models.Trade
 		_ = ob.Process(taker2, &trades2)
 
 		assert.Len(t, trades2, 1)
 		assert.Equal(t, uint64(50), trades2[0].Qty)
+		assert.Equal(t, uint64(11), trades2[0].MakerUserID)
+		assert.Equal(t, uint64(22), trades2[0].TakerUserID)
 		assert.Equal(t, uint64(20), pl.(*PriceLevel).Volume, "Level volume should drop to 20")
 
-		taker3 := models.Order{ID: 4, Side: models.Buy, Price: 5000, Qty: 40}
+		taker3 := models.Order{ID: 4, UserID: 23, Side: models.Buy, Price: 5000, Qty: 40}
 		var trades3 []*models.Trade
 		_ = ob.Process(taker3, &trades3)
 
 		assert.Len(t, trades3, 1)
 		assert.Equal(t, uint64(20), trades3[0].Qty, "Should only fill remaining 20")
+		assert.Equal(t, uint64(11), trades3[0].MakerUserID)
+		assert.Equal(t, uint64(23), trades3[0].TakerUserID)
 
 		assert.Equal(t, 0, ob.asks.Size(), "Asks tree should be completely purged")
 
@@ -144,7 +156,7 @@ func TestInMemOrderBook_ComplexPartialFills(t *testing.T) {
 
 	t.Run("Zero Quantity Order is rejected", func(t *testing.T) {
 		ob := NewInMemOrderBook()
-		order := models.Order{ID: 99, Side: models.Buy, Price: 100, Qty: 0}
+		order := models.Order{ID: 99, UserID: 99, Side: models.Buy, Price: 100, Qty: 0}
 
 		err := ob.Add(order)
 		assert.Error(t, err)
@@ -156,11 +168,11 @@ func TestInMemOrderBook_PriceTimePriority(t *testing.T) {
 	t.Run("Strict FIFO execution for multiple orders at the exact same price", func(t *testing.T) {
 		ob := NewInMemOrderBook()
 
-		_ = ob.Add(models.Order{ID: 101, Side: models.Sell, Price: 5000, Qty: 10}) // Đặt sớm nhất (Đứng đầu hàng)
-		_ = ob.Add(models.Order{ID: 102, Side: models.Sell, Price: 5000, Qty: 20}) // Đặt thứ 2
-		_ = ob.Add(models.Order{ID: 103, Side: models.Sell, Price: 5000, Qty: 15}) // Đặt muộn nhất (Đứng cuối hàng)
+		_ = ob.Add(models.Order{ID: 101, UserID: 1001, Side: models.Sell, Price: 5000, Qty: 10}) // Đặt sớm nhất (Đứng đầu hàng)
+		_ = ob.Add(models.Order{ID: 102, UserID: 1002, Side: models.Sell, Price: 5000, Qty: 20}) // Đặt thứ 2
+		_ = ob.Add(models.Order{ID: 103, UserID: 1003, Side: models.Sell, Price: 5000, Qty: 15}) // Đặt muộn nhất (Đứng cuối hàng)
 
-		taker := models.Order{ID: 201, Side: models.Buy, Price: 5000, Qty: 25}
+		taker := models.Order{ID: 201, UserID: 2001, Side: models.Buy, Price: 5000, Qty: 25}
 		var trades []*models.Trade
 		_ = ob.Process(taker, &trades)
 
@@ -168,9 +180,13 @@ func TestInMemOrderBook_PriceTimePriority(t *testing.T) {
 
 		assert.Equal(t, uint64(10), trades[0].Qty)
 		assert.Equal(t, uint64(101), trades[0].MakerOrderID, "First maker must be filled first")
+		assert.Equal(t, uint64(1001), trades[0].MakerUserID)
+		assert.Equal(t, uint64(2001), trades[0].TakerUserID)
 
 		assert.Equal(t, uint64(15), trades[1].Qty)
 		assert.Equal(t, uint64(102), trades[1].MakerOrderID, "Second maker must be filled second")
+		assert.Equal(t, uint64(1002), trades[1].MakerUserID)
+		assert.Equal(t, uint64(2001), trades[1].TakerUserID)
 
 		pl, _ := ob.asks.Get(uint64(5000))
 		assert.Equal(t, uint64(20), pl.(*PriceLevel).Volume, "Remaining volume should be 5 (from ID 102) + 15 (from ID 103)")

@@ -119,3 +119,105 @@ var MatchingEngine_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/engine.proto",
 }
+
+const (
+	SettlementEngine_ReportTrade_FullMethodName = "/engine.SettlementEngine/ReportTrade"
+)
+
+// SettlementEngineClient is the client API for SettlementEngine service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type SettlementEngineClient interface {
+	ReportTrade(ctx context.Context, in *TradeReportRequest, opts ...grpc.CallOption) (*TradeReportResponse, error)
+}
+
+type settlementEngineClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSettlementEngineClient(cc grpc.ClientConnInterface) SettlementEngineClient {
+	return &settlementEngineClient{cc}
+}
+
+func (c *settlementEngineClient) ReportTrade(ctx context.Context, in *TradeReportRequest, opts ...grpc.CallOption) (*TradeReportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TradeReportResponse)
+	err := c.cc.Invoke(ctx, SettlementEngine_ReportTrade_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SettlementEngineServer is the server API for SettlementEngine service.
+// All implementations must embed UnimplementedSettlementEngineServer
+// for forward compatibility.
+type SettlementEngineServer interface {
+	ReportTrade(context.Context, *TradeReportRequest) (*TradeReportResponse, error)
+	mustEmbedUnimplementedSettlementEngineServer()
+}
+
+// UnimplementedSettlementEngineServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedSettlementEngineServer struct{}
+
+func (UnimplementedSettlementEngineServer) ReportTrade(context.Context, *TradeReportRequest) (*TradeReportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportTrade not implemented")
+}
+func (UnimplementedSettlementEngineServer) mustEmbedUnimplementedSettlementEngineServer() {}
+func (UnimplementedSettlementEngineServer) testEmbeddedByValue()                          {}
+
+// UnsafeSettlementEngineServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SettlementEngineServer will
+// result in compilation errors.
+type UnsafeSettlementEngineServer interface {
+	mustEmbedUnimplementedSettlementEngineServer()
+}
+
+func RegisterSettlementEngineServer(s grpc.ServiceRegistrar, srv SettlementEngineServer) {
+	// If the following call panics, it indicates UnimplementedSettlementEngineServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&SettlementEngine_ServiceDesc, srv)
+}
+
+func _SettlementEngine_ReportTrade_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TradeReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SettlementEngineServer).ReportTrade(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SettlementEngine_ReportTrade_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SettlementEngineServer).ReportTrade(ctx, req.(*TradeReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// SettlementEngine_ServiceDesc is the grpc.ServiceDesc for SettlementEngine service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var SettlementEngine_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "engine.SettlementEngine",
+	HandlerType: (*SettlementEngineServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ReportTrade",
+			Handler:    _SettlementEngine_ReportTrade_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/engine.proto",
+}

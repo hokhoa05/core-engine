@@ -145,6 +145,8 @@ func (ob *InMemOrderBook) matchWithPriceLevel(pl *PriceLevel, taker *models.Orde
 		if tradeObj != nil {
 			tradeObj.MakerOrderID = maker.ID
 			tradeObj.TakerOrderID = taker.ID
+			tradeObj.MakerUserID = maker.UserID
+			tradeObj.TakerUserID = taker.UserID
 			tradeObj.Price = pl.Price
 			tradeObj.Qty = matchQty
 

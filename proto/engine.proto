@@ -12,6 +12,10 @@ service MatchingEngine {
   rpc PushOrder (OrderRequest) returns (OrderResponse);
 }
 
+service SettlementEngine {
+  rpc ReportTrade (TradeReportRequest) returns (TradeReportResponse);
+}
+
 message OrderRequest {
   int64 order_id = 1;
   int64 user_id = 2;
@@ -23,4 +27,17 @@ message OrderRequest {
 message OrderResponse {
   bool success = 1;
   string message = 2;
+}
+
+message TradeReportRequest {
+  int64 maker_order_id = 1;
+  int64 taker_order_id = 2;
+  int64 maker_user_id = 3;
+  int64 taker_user_id = 4;
+  int64 price = 5;
+  int64 qty = 6;
+}
+
+message TradeReportResponse {
+  bool success = 1;
 }
